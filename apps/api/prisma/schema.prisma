@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReviewStatus {
+  candidate
+  validated
+  needs_review
+  approved
+  rejected
+}
+
+enum PublicationStatus {
+  unpublished
+  published
+  publish_failed
+}
+
+enum ValidityStatus {
+  active
+  expired
+  superseded
+  retracted
+  conflicted
+}
+
+model CandidateFact {
+  id                String            @id @default(cuid())
+  subjectName       String
+  subjectType       String
+  predicate         String
+  objectName        String
+  objectType        String
+  objectProperties  Json?
+  evidenceAtomIds   String[]
+  sourceDocumentId  String?
+  evidenceText      String
+  llmConfidence     Float?
+  approvalScore     Int?
+  reviewStatus      ReviewStatus      @default(candidate)
+  publicationStatus PublicationStatus @default(unpublished)
+  validityStatus    ValidityStatus?
+  ontologyVersion   String?
+  validationSummary Json?
+  accessPolicy      String?
+  validFrom         DateTime?
+  validUntil        DateTime?
+  knownFrom         DateTime?
+  knownUntil        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
