@@ -1,91 +1,393 @@
-name: singularity-mini-kg-demo
-version: 1
+name: kanat-mind-map-demo-ontology
+ontologyVersion: demo_ontology_v2
+schemaVersion: 1
+status: active
+extractionPromptVersion: extraction_prompt_v1
+validationRuleVersion: validation_rules_v1
 description: >-
-  Singularity Mini KG Demo içinde LLM fact extraction ve graph publish
-  işlemlerinde kullanılmasına izin verilen entity ve relation tipleri.
+  kanat-mind-map living memory MVP içinde extraction, validation, review,
+  GraphPatch ve curated graph işlemlerinde izin verilen tip ve politikalar.
+
+allowedEntityTypes:
+  - Customer
+  - Person
+  - Team
+  - Region
+  - Product
+  - Project
+  - Service
+  - Risk
+  - SalesTarget
+  - Decision
+  - Document
+  - EvidenceAtom
+  - Role
+  - RoleAssignment
+  - Department
+  - GraphPatch
+  - SemanticMemoryItem
+  - Conflict
+
+allowedRelationTypes:
+  - managedBy
+  - locatedIn
+  - interestedIn
+  - hasTarget
+  - hasRisk
+  - memberOf
+  - ownsService
+  - partOf
+  - dependsOn
+  - decidedIn
+  - affects
+  - mentions
+  - holdsRole
+  - hasRoleAssignment
+  - supportedBy
+  - supersedes
+  - retractedBy
+  - summarizes
+
+extractionPolicy:
+  candidateEntityTypes:
+    - Customer
+    - Person
+    - Team
+    - Region
+    - Product
+    - Project
+    - Service
+    - Risk
+    - SalesTarget
+    - Decision
+    - Document
+    - Role
+    - RoleAssignment
+    - Department
+  systemManagedEntityTypes:
+    - EvidenceAtom
+    - GraphPatch
+    - SemanticMemoryItem
+    - Conflict
+  candidateRelationTypes:
+    - managedBy
+    - locatedIn
+    - interestedIn
+    - hasTarget
+    - hasRisk
+    - memberOf
+    - ownsService
+    - partOf
+    - dependsOn
+    - decidedIn
+    - affects
+    - mentions
+    - holdsRole
+    - hasRoleAssignment
+  systemManagedRelationTypes:
+    - supportedBy
+    - supersedes
+    - retractedBy
+    - summarizes
 
 entities:
   Customer:
     description: Ürün, servis, satış veya ilişki bilgisi takip edilen müşteri kuruluş.
+    category: domain
   Person:
-    description: Müşteri ya da ekip bağlamında adı geçen gerçek kişi.
+    description: Müşteri, ekip veya organizasyon bağlamında adı geçen gerçek kişi.
+    category: domain
   Team:
     description: Kişilerin üyesi olabildiği ve servis sahipliği üstlenebilen organizasyonel ekip.
+    category: domain
   Region:
     description: Bir müşterinin bulunduğu coğrafi veya operasyonel bölge.
+    category: domain
   Product:
     description: Bir müşterinin ilgi gösterdiği ticari ürün.
+    category: domain
   Project:
     description: Servisleri ve ilgili çalışmaları kapsayan proje.
+    category: domain
   Service:
     description: Bir ekibin sahip olduğu, projeye bağlı veya başka servislere bağımlı yazılım servisi.
+    category: domain
   Risk:
-    description: Bir müşteri veya projeyi etkileyebilecek tanımlanmış risk.
+    description: Bir müşteri, ürün, proje veya servisi etkileyebilecek tanımlanmış risk.
+    category: domain
   SalesTarget:
-    description: Bir müşteri için belirlenmiş ölçülebilir satış hedefi.
+    description: Bir müşteri veya organizasyon birimi için belirlenmiş ölçülebilir satış hedefi.
+    category: domain
+    temporalRequired: true
   Decision:
     description: Bir dokümanda kayıt altına alınmış iş veya teknik karar.
+    category: domain
   Document:
     description: Evidence atomların çıkarıldığı PDF, transcript veya yazılım notu kaynağı.
+    category: evidence
+  EvidenceAtom:
+    description: Kaynak metnin konumu ve hash bilgisi korunmuş, fact üretimine kanıt olan atomik parçası.
+    category: evidence
+  Role:
+    description: Organizasyon içinde tanımlı görev veya sorumluluk rolü.
+    category: domain
+  RoleAssignment:
+    description: Bir kişinin belirli rol ve organizasyon bağlamındaki zaman sınırlı görevlendirme kaydı.
+    category: workflow
+    temporalRequired: true
+  Department:
+    description: Rol, kişi ve ekipleri kapsayabilen organizasyonel departman.
+    category: domain
+  GraphPatch:
+    description: Curated knowledge graph üzerinde review sonrası uygulanabilecek operasyon paketi.
+    category: workflow
+  SemanticMemoryItem:
+    description: Yalnız curated graph veya published assertion temelinden türetilen kanıta bağlı hafıza kartı.
+    category: memory
+  Conflict:
+    description: Candidate veya mevcut assertion'lar arasında insan incelemesi gerektiren çelişki kaydı.
+    category: workflow
 
 relations:
   managedBy:
     description: Bir müşterinin sorumluluğunu üstlenen kişiyi belirtir.
     from: Customer
     to: Person
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: customerRepresentative
   locatedIn:
     description: Bir müşterinin bulunduğu bölgeyi belirtir.
     from: Customer
     to: Region
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: documentedSource
   interestedIn:
     description: Bir müşterinin ilgilendiği ürünü belirtir.
     from: Customer
     to: Product
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: documentedSource
   hasTarget:
-    description: Bir müşteri için tanımlanan satış hedefini belirtir.
+    description: Bir müşteri için tanımlanan zaman sınırlı satış hedefini belirtir.
     from: Customer
     to: SalesTarget
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    temporalRequired: true
+    sourceAuthorityKey: salesTarget
   hasRisk:
     description: Bir müşteriyle ilişkili riski belirtir.
     from: Customer
     to: Risk
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: risk
   memberOf:
     description: Bir kişinin üyesi olduğu ekibi belirtir.
     from: Person
     to: Team
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: organizationMembership
   ownsService:
     description: Bir ekibin sahipliğini üstlendiği servisi belirtir.
     from: Team
     to: Service
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: serviceOwnership
   partOf:
     description: Bir servisin parçası olduğu projeyi belirtir.
     from: Service
     to: Project
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: documentedSource
   dependsOn:
     description: Bir servisin çalışmak için bağımlı olduğu başka servisi belirtir.
     from: Service
     to: Service
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: technicalDependency
   decidedIn:
     description: Bir kararın kayıt altına alındığı kaynak dokümanı belirtir.
     from: Decision
     to: Document
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: approvedDecisionRecord
   affects:
     description: Bir riskin etkilediği projeyi belirtir.
     from: Risk
     to: Project
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: risk
   mentions:
-    description: Bir dokümanın adı geçen herhangi bir ontology entity'sine referans verdiğini belirtir.
+    description: Bir dokümanın herhangi bir izinli ontology entity'sine referans verdiğini belirtir.
     from: Document
     to: "*"
-    evidence_required: true
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: documentedSource
+  holdsRole:
+    description: Bir kişinin belirli tarih aralığında sahip olduğu organizasyonel rolü belirtir.
+    from: Person
+    to: Role
+    evidenceRequired: true
+    approvalRequired: true
+    temporalRequired: true
+    sourceAuthorityKey: roleAssignment
+  hasRoleAssignment:
+    description: Bir kişinin zaman ve organizasyon bağlamı taşıyan rol atama kaydını belirtir.
+    from: Person
+    to: RoleAssignment
+    evidenceRequired: true
+    approvalRequired: true
+    temporalRequired: true
+    sourceAuthorityKey: roleAssignment
+  supportedBy:
+    description: Bir candidate, workflow veya curated bilginin dayandığı evidence atomu belirtir.
+    from: "*"
+    to: EvidenceAtom
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: documentedSource
+  supersedes:
+    description: Yeni bir rol atamasının önceki rol atamasının yerini aldığını belirtir.
+    from: RoleAssignment
+    to: RoleAssignment
+    evidenceRequired: true
+    approvalRequired: true
+    temporalRequired: true
+    sourceAuthorityKey: roleAssignment
+  retractedBy:
+    description: Bir rol atamasının onaylı GraphPatch operasyonuyla geri çekildiğini belirtir.
+    from: RoleAssignment
+    to: GraphPatch
+    evidenceRequired: true
+    approvalRequired: true
+    sourceAuthorityKey: roleAssignment
+  summarizes:
+    description: Bir semantic memory kartının özetlediği izinli domain entity'sini belirtir.
+    from: SemanticMemoryItem
+    to:
+      - Customer
+      - Person
+      - Team
+      - Department
+      - Product
+      - Project
+      - Service
+    evidenceRequired: true
+    approvalRequired: false
+    sourceAuthorityKey: curatedKnowledge
+
+sourceAuthority:
+  documentedSource:
+    primary:
+      - ApprovedDocument
+      - SystemOfRecord
+    secondary:
+      - MeetingNotes
+      - Email
+    conflictPolicy: human_review_required
+  customerRepresentative:
+    primary:
+      - CRM
+    secondary:
+      - SalesMeetingNotes
+    conflictPolicy: authoritative_source_wins
+  salesTarget:
+    primary:
+      - ApprovedSalesPlan
+      - CRM
+    secondary:
+      - SalesMeetingNotes
+    conflictPolicy: human_review_required
+  risk:
+    primary:
+      - ApprovedRiskRegister
+    secondary:
+      - MeetingNotes
+      - Document
+    conflictPolicy: human_review_required
+  organizationMembership:
+    primary:
+      - HRSystem
+      - ApprovedOrgChart
+    secondary:
+      - MeetingNotes
+    conflictPolicy: human_review_required
+  serviceOwnership:
+    primary:
+      - ServiceCatalog
+    secondary:
+      - TechnicalDocument
+    conflictPolicy: authoritative_source_wins
+  technicalDependency:
+    primary:
+      - ServiceCatalog
+      - ArchitectureRepository
+    secondary:
+      - TechnicalDocument
+    conflictPolicy: human_review_required
+  approvedDecisionRecord:
+    primary:
+      - ApprovedDecisionLog
+    secondary:
+      - MeetingNotes
+    conflictPolicy: human_review_required
+  roleAssignment:
+    primary:
+      - HRSystem
+      - ApprovedOrgChart
+    secondary:
+      - MeetingNotes
+      - Email
+    conflictPolicy: human_review_required
+  curatedKnowledge:
+    primary:
+      - PublishedAssertion
+      - CuratedKnowledgeGraph
+    secondary: []
+    conflictPolicy: human_review_required
+
+reviewPolicies:
+  default:
+    graphPatchApprovalRequired: true
+    evidenceRequired: true
+    validationRequired: true
+  mandatoryHumanReviewRelations:
+    - managedBy
+    - hasTarget
+    - hasRisk
+    - memberOf
+    - ownsService
+    - dependsOn
+    - decidedIn
+    - affects
+    - holdsRole
+    - hasRoleAssignment
+    - supersedes
+    - retractedBy
+  ontologyChanges:
+    proposalOnly: true
+    humanApprovalRequired: true
+
+cardinalityRules:
+  SalesPresident:
+    relation: holdsRole
+    roleName: SalesPresident
+    maxActiveHolders: 1
+    overlapAllowed: false
+    changeRequiresHumanReview: true
+
+future:
+  ontologyProposalWorkflow: true
+  targetedReExtraction: true
+  automatedMigration: false
