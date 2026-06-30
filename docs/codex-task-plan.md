@@ -1,117 +1,402 @@
-# Singularity Mini KG Codex Task Planı
+# Codex Task Plan
 
-## Çalışma yöntemi
+## 1. Amaç
 
-Task'ler aşağıdaki sırayla, tek tek uygulanır. Her task mevcut mimariyi korumalı, gereksiz dependency eklememeli, ilgili test veya manuel kontrolü belirtmeli ve commit oluşturmamalıdır. Bir task'ın kabul kriteri sağlanmadan bağımlı sonraki task'a geçilmez.
+Bu plan mevcut FastAPI, NestJS, Next.js ve container temellerinin bulunduğu `kanat-mind-map` projesini yeni living memory mimarisine taşımak için hazırlanmıştır.
 
-Değişmez sınırlar:
+Bu plan sıfırdan framework kurdurmak yerine mevcut projeyi aşamalı olarak düzenlemeyi hedefler.
+
+## 2. Değişmez Codex kuralları
 
 ```text
-Next.js → NestJS
-NestJS → FastAPI → structured JSON
-NestJS → PostgreSQL
-NestJS → Neo4j
-
-LLM output → candidate_facts → human approval → Neo4j publish
+Commit atma.
+Tek seferde tüm projeyi değiştirme.
+Mevcut servis sınırlarını bozma.
+FastAPI veritabanına yazmasın.
+Next.js yalnızca NestJS ile konuşsun.
+LLM output doğrudan Neo4j'ye yazılmasın.
+Her task sonunda çalıştırılacak komutları yaz.
+Yeni dependency ekliyorsan nedenini açıkla.
+MVP ve future ayrımını koru.
 ```
 
-FastAPI'nin PostgreSQL/Neo4j'ye, Next.js'in FastAPI/Neo4j'ye doğrudan erişmesi yasaktır.
+## 3. Faz 0 — Dokümanları yerleştir
 
-## Faz 0 — Hazırlık
+### Task 0.1 — Docs setini güncelle
 
-- **0.1 Proje kapsam dokümanları:** `docs/demo-plan.md`, `docs/architecture.md`, `docs/evidence-atom-rules.md` ve bu task planını oluştur.
-- **0.2 Demo ontology:** İzinli entity ve relation tiplerini `packages/ontology/demo-ontology.yaml` içinde tanımla.
+Amaç: Yeni mimari dokümanlarını repo içine almak.
 
-## Faz 1 — Monorepo, altyapı ve servis iskeletleri
+Dosyalar:
 
-- **1.1 Monorepo iskeleti:** `apps/web`, `apps/api`, `apps/ai-api`, `packages/contracts`, `packages/ontology` ve mock-data dizinlerini oluştur.
-- **1.2 Docker Compose:** PostgreSQL ve Neo4j servislerini, volume ve env örneklerini ekle.
-- **1.3 Next.js app:** TypeScript ve Tailwind tabanlı web uygulamasını başlat.
-- **1.4 NestJS app:** API uygulamasını ve `GET /health` endpoint'ini başlat.
-- **1.5 FastAPI app:** AI/document servisini ve `GET /health` endpoint'ini başlat.
+```text
+docs/project-overview.md
+docs/mvp-demo-plan.md
+docs/system-architecture.md
+docs/memory-taxonomy.md
+docs/evidence-atom-rules.md
+docs/fact-lifecycle.md
+docs/data-model-spec.md
+docs/ontology-governance.md
+docs/validation-review-policy.md
+docs/codex-task-plan.md
+docs/development-guidelines.md
+docs/smoke-test-checklist.md
+```
 
-Kalite kapısı: PostgreSQL ve Neo4j container'ları; üç uygulama ve iki health endpoint'i yerelde çalışır.
+Kabul kriteri:
 
-## Faz 2 — NestJS veri modelleri ve upload
+```text
+Docs klasörü yeni mimariyi anlatıyor.
+Memory, archive, candidate, curated KG ayrımı net.
+Eski tasks_info tekrarı kaldırılmış veya development-guidelines'a dönüştürülmüş.
+```
 
-- **2.1 Prisma setup:** NestJS-Prisma-PostgreSQL bağlantısını ve migration akışını kur.
-- **2.2 Document module:** Document modelini ve list/detail endpoint'lerini ekle.
-- **2.3 File upload:** `.pdf`, `.txt`, `.md` upload, local storage ve dosya tipi validation ekle.
-- **2.4 EvidenceAtom model:** Document relation'ı ve evidence atom listeleme endpoint'ini ekle.
-- **2.5 CandidateFact model:** Candidate fact modeli, list/detail/edit/approve/reject endpoint'lerini ekle.
+Codex prompt:
 
-Kalite kapısı: Desteklenen dosyalar yüklenir, document kaydı oluşur, migration'lar temiz veritabanında çalışır.
+```text
+Repo docs klasörünü kanat-mind-map living memory mimarisine göre güncelle.
+Verilen markdown dosyalarını docs altına yerleştir.
+Eski architecture.md varsa system-architecture.md adına taşı.
+Eski demo-plan.md varsa mvp-demo-plan.md adına taşı.
+Eski proje_bilgileri.md varsa project-overview.md adına taşı.
+Eski tasks_info.md varsa development-guidelines.md olarak düzenle ve task tekrarlarını kaldır.
+Kod değiştirme.
+Commit atma.
+```
 
-## Faz 3 — FastAPI document processing
+## 4. Faz 1 — Ontology ve contracts
 
-- **3.1 Parser schema'ları:** Request, evidence atom, extracted fact ve response Pydantic modellerini ekle.
-- **3.2 Text extraction:** PDF için PyMuPDF veya pypdf; TXT/MD için UTF-8 direct read uygula.
-- **3.3 Evidence atom generator:** Kaynak türüne özel bölme, stabil ID ve quality score üretimini uygula.
-- **3.4 Process endpoint:** `POST /process-document` ile atoms döndür; candidate facts bu aşamada boş olabilir.
+### Task 1.1 — Ontology genişletme
 
-Kalite kapısı: PDF/TXT/MD parse edilir ve endpoint doğrulanmış evidence atom listesi döndürür.
+Amaç: Mevcut demo ontology'yi living memory kavramlarıyla genişletmek.
 
-## Faz 4 — LLM candidate fact extraction
+Eklenecek entity tipleri:
 
-- **4.1 LLM client abstraction:** OpenAI-compatible, env ile yapılandırılan ve JSON dönen client ekle.
-- **4.2 Extraction ve ontology validation:** Atomları batch'le, izinli ontology ile prompt oluştur, çıktıyı Pydantic ile doğrula.
-- **4.3 Process endpoint facts:** Evidence atoms ile candidate facts'i birlikte döndür; LLM yoksa kontrollü warning ver.
-- **4.4 NestJS entegrasyonu:** `POST /documents/:id/extract` ile FastAPI'yi çağır, atoms/facts'i PostgreSQL'e yaz ve document durumunu güncelle.
+```text
+Role
+RoleAssignment
+Department
+EvidenceAtom
+Conflict
+GraphPatch
+SemanticMemoryItem
+```
 
-Her fact mevcut `evidence_atom_ids`, 0-1 arası `llm_confidence`, `round(llm_confidence * 100)` değerinde `approval_score`, nullable `valid_from` ve `valid_until` taşır.
+Eklenecek relation tipleri:
 
-Kalite kapısı: Extraction sonunda evidence atomlar ve candidate fact'ler PostgreSQL'de izlenebilir biçimde bulunur.
+```text
+holdsRole
+hasRoleAssignment
+supportedBy
+supersedes
+retractedBy
+summarizes
+```
 
-## Faz 5 — Frontend temel ekranları
+Kabul kriteri:
 
-- **5.1 API client ve layout:** Merkezi NestJS API client, navigation ve temel state yönetimini kur.
-- **5.2 Upload ekranı:** Dosya ve source type alanlarıyla document upload formunu ekle.
-- **5.3 Document list:** Tablo, status ve extract aksiyonunu ekle.
-- **5.4 Document detail:** Metadata, evidence atoms ve candidate facts görünümünü ekle.
+```text
+packages/ontology/demo-ontology.yaml güncellenmiş.
+Her relation from/to, evidence_required ve review policy taşıyor.
+SalesPresident maxActiveHolders=1 kuralı eklenmiş.
+```
 
-## Faz 6 — Human review
+### Task 1.2 — Contract schema dosyaları
 
-- **6.1 Candidate facts list:** Subject-predicate-object, score, status ve validity sütunlarını sun.
-- **6.2 Fact edit:** Fact alanlarını evidence ile birlikte drawer/dialog içinde düzenlenebilir yap.
-- **6.3 Approve/reject:** Review aksiyonlarını API ile bağla ve UI state'ini güncelle.
+Amaç: Servisler arası JSON contract'ları netleştirmek.
 
-Kalite kapısı: Kullanıcı candidate fact'i evidence ile inceleyebilir, düzenleyebilir, onaylayabilir veya reddedebilir.
+Dosyalar:
 
-## Faz 7 — Neo4j publish ve graph viewer
+```text
+packages/contracts/evidence-atom.schema.json
+packages/contracts/candidate-fact.schema.json
+packages/contracts/validation-result.schema.json
+packages/contracts/graph-patch.schema.json
+packages/contracts/semantic-memory-item.schema.json
+```
 
-- **7.1 Neo4j service:** Env tabanlı driver, query helper, lifecycle close ve health kontrolü ekle.
-- **7.2 Publish endpoint:** Yalnızca approved fact için node/relation `MERGE` et; relation metadata'sını ve PostgreSQL publish durumunu güncelle.
-- **7.3 Graph endpoint:** Published graph'ı `{nodes, edges}` formatında döndür.
-- **7.4 Graph viewer:** React Flow ile node/relation ve edge evidence/score detaylarını göster.
+Kabul kriteri:
 
-Kalite kapısı: Candidate/rejected fact publish edilemez; approved fact idempotent olarak yayımlanır ve viewer'da görünür.
+```text
+Contract field naming camelCase.
+FastAPI response ve NestJS DTO'ları bu contract'lara yakın.
+```
 
-## Faz 8 — Basic ask
+## 5. Faz 2 — PostgreSQL data model update
 
-- **8.1 Intent parser:** Desteklenen soru kalıplarını basit string matching ile intent ve entity adına ayır.
-- **8.2 Cypher templates:** Yedi desteklenen intent için güvenli template query'ler ve evidence içeren response ekle.
-- **8.3 Ask ekranı:** Soru input'u, örnekler, loading/error ve evidence/matches görünümünü ekle.
+### Task 2.1 — Prisma modellerini living memory'ye hazırla
 
-Desteklenen başlangıç intent'leri: müşteri sorumlusu, bölgesi, hedefi ve riskleri; servisin projesi, bağımlılığı ve sahibi.
+Amaç: Candidate-only eski modeli genişletmek.
 
-Kalite kapısı: En az beş örnek soru graph verisinden answer, evidence ve approval score döndürür.
+Eklenecek/güncellenecek modeller:
 
-## Faz 9 — Demo polish, seed ve doğrulama
+```text
+Document
+EvidenceAtom
+CandidateFact
+ValidationResult
+GraphPatch
+PublishedAssertion
+SemanticMemoryItem
+```
 
-- **9.1 Mock data:** PDF, transcript ve software note örneklerini yerleştir.
-- **9.2 Seed/import helper:** Tekrarlanabilir demo veri hazırlama akışı ekle.
-- **9.3 Validation/error polish:** Desteklenmeyen input, servis hatası ve boş state'leri anlaşılır hale getir.
-- **9.4 README local setup:** Infra, migration ve üç uygulamanın başlatılma sırasını dokümante et.
-- **9.5 Manual smoke test:** Upload'dan ask cevabına kadar kontrol listesini ekle.
+Kabul kriteri:
 
-Kalite kapısı: Temiz yerel ortamda README izlenerek kurulum yapılır ve smoke test baştan sona geçer.
+```text
+Migration temiz çalışır.
+Mevcut document/upload akışı bozulmaz.
+CandidateFact reviewStatus/publicationStatus/validityStatus alanlarını taşır.
+```
 
-## Her task sonunda kontrol
+### Task 2.2 — ValidationResult endpointleri
 
-1. Yalnızca istenen task kapsamı değişti mi?
-2. Mimari servis sınırları korundu mu?
-3. Eklenen dependency ve env değişkenleri dokümante edildi mi?
-4. İlgili test, lint, build veya manuel kontrol çalıştırıldı mı?
-5. Kabul kriterlerinin her biri doğrulandı mı?
-6. Kullanıcının manuel çalıştıracağı komutlar ve kontrol listesi belirtildi mi?
-7. Commit oluşturulmadı mı?
+Endpointler:
+
+```text
+GET /facts/:id/validation-results
+POST /facts/:id/validate
+```
+
+Kabul kriteri:
+
+```text
+Candidate fact validate edilebilir.
+ValidationResult PostgreSQL'e yazılır.
+UI için JSON checks döner.
+```
+
+### Task 2.3 — GraphPatch modeli ve endpointleri
+
+Endpointler:
+
+```text
+GET /graph-patches
+GET /graph-patches/:id
+POST /facts/:id/create-patch
+POST /graph-patches/:id/approve
+POST /graph-patches/:id/reject
+```
+
+Kabul kriteri:
+
+```text
+CandidateFact doğrudan publish edilmez.
+Önce GraphPatch oluşur.
+Patch review edilebilir.
+```
+
+## 6. Faz 3 — FastAPI output genişletme
+
+### Task 3.1 — Pydantic schema update
+
+FastAPI şu modelleri döndürmeye hazır olmalı:
+
+```text
+EvidenceAtom
+ExtractedFact
+ExtractionWarning
+ProcessDocumentResponse
+```
+
+Kabul kriteri:
+
+```text
+Response camelCase alias destekler.
+Evidence atomlar atomId ve contentHash taşır.
+ExtractedFact evidenceAtomIds taşır.
+```
+
+### Task 3.2 — Evidence atom generator polish
+
+Kabul kriteri:
+
+```text
+PDF/TXT/MD için stabil atom ID üretilir.
+qualityScore hesaplanır.
+sectionPath ve location korunur.
+```
+
+### Task 3.3 — Fact extraction ontology-aware hale getir
+
+Kabul kriteri:
+
+```text
+LLM prompt sadece allowed ontology subset kullanır.
+Ontology dışı relation filtered veya validation warning olur.
+LLM failure durumunda atoms dönmeye devam eder.
+```
+
+## 7. Faz 4 — Validation engine
+
+### Task 4.1 — Validation service iskeleti
+
+Kontroller:
+
+```text
+schema
+ontology
+evidence support
+temporal
+source authority
+conflict
+ACL placeholder
+business rules
+```
+
+Kabul kriteri:
+
+```text
+ValidationService candidate fact alır ve ValidationResult döner.
+```
+
+### Task 4.2 — Role cardinality conflict
+
+Amaç: Ayşe/Mehmet örneği gibi ezilen bilgi senaryosunu desteklemek.
+
+Kabul kriteri:
+
+```text
+SalesPresident için maxActiveHolders=1 kontrol edilir.
+Mevcut active assertion varsa conflict veya role_transition patch önerilir.
+```
+
+## 8. Faz 5 — Graph patch publish
+
+### Task 5.1 — GraphPatchService
+
+Amaç: CandidateFact'ten GraphPatch üretmek.
+
+Kabul kriteri:
+
+```text
+ADD_ASSERTION operation desteklenir.
+EXPIRE_ASSERTION operation desteklenir.
+Evidence refs patch içinde taşınır.
+```
+
+### Task 5.2 — Publish endpoint'i patch bazlı hale getir
+
+Endpoint:
+
+```text
+POST /graph-patches/:id/publish
+```
+
+Kabul kriteri:
+
+```text
+Sadece approved patch publish edilir.
+Candidate/rejected patch publish edilemez.
+Neo4j idempotent MERGE kullanır.
+PublishedAssertion kayıtları oluşur.
+```
+
+## 9. Faz 6 — Semantic memory
+
+### Task 6.1 — SemanticMemoryItem modeli ve service
+
+Amaç: Curated KG'den öz bilgi kartı üretmek.
+
+Kabul kriteri:
+
+```text
+Publish sonrası ilgili memory item invalidate/update edilir.
+SemanticMemoryItem summary, currentFactRefs, evidenceAtomIds taşır.
+```
+
+### Task 6.2 — Memory endpointleri
+
+Endpointler:
+
+```text
+GET /memory
+GET /memory/:id
+GET /entities/:id/memory
+```
+
+Kabul kriteri:
+
+```text
+Semantic memory card frontend'de gösterilebilir.
+```
+
+## 10. Faz 7 — Working memory ve Ask
+
+### Task 7.1 — WorkingMemoryBuilder
+
+Amaç: LLM/ask için küçük context paketi hazırlamak.
+
+Kabul kriteri:
+
+```text
+Question/entity intent'e göre semantic memory + curated facts + evidence seçilir.
+Tüm graph veya tüm archive LLM'e verilmez.
+```
+
+### Task 7.2 — Ask endpoint semantic-memory-first hale getir
+
+Akış:
+
+```text
+Semantic Memory first
+Curated KG fallback
+Evidence retrieval
+Source-grounded answer
+```
+
+Kabul kriteri:
+
+```text
+En az 5 soru evidence'lı cevap döner.
+Cevap current vs historical ayrımını yapabilir.
+```
+
+## 11. Faz 8 — Frontend ekranları
+
+### Task 8.1 — Validation result UI
+
+Candidate fact detayında validation checks görünür.
+
+### Task 8.2 — Graph patch review UI
+
+Patch operations, evidence ve önerilen aksiyon görünür.
+
+### Task 8.3 — Semantic memory UI
+
+Memory card list/detail ekranı eklenir.
+
+### Task 8.4 — Ask UI polish
+
+Cevap yanında evidence, memory source ve approval bilgisi görünür.
+
+## 12. Faz 9 — Smoke test ve polish
+
+### Task 9.1 — Mock data güncelle
+
+Ayşe/Mehmet role transition örneği, müşteri hedefi ve servis dependency örnekleri eklenir.
+
+### Task 9.2 — Smoke test checklist uygula
+
+`docs/smoke-test-checklist.md` takip edilir.
+
+### Task 9.3 — README setup güncelle
+
+Local setup, env, migration ve demo flow netleştirilir.
+
+## 13. Önerilen commit grupları
+
+Codex commit atmayacak. Kullanıcı manuel commit atacak.
+
+```text
+docs: restructure living memory documentation
+refactor(ontology): add living memory ontology concepts
+feat(api): add validation and graph patch models
+feat(ai): align extraction contracts with ontology
+feat(api): add validation engine
+feat(api): add graph patch publish flow
+feat(api): add semantic memory service
+feat(web): add validation and patch review screens
+feat(web): add semantic memory screens
+feat(api): make ask semantic-memory-first
+docs: add smoke test and setup updates
+```

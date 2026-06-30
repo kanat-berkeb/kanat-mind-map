@@ -53,6 +53,49 @@ docker compose ps
 
 PostgreSQL `localhost:5432`, Neo4j Browser `http://localhost:7474` ve Neo4j Bolt `bolt://localhost:7687` adresinde çalışır.
 
+## Tüm servisleri Docker ile çalıştırma
+
+Her uygulama ayrı container olarak çalışır:
+
+- `web`: Next.js, `http://localhost:3000`
+- `api`: NestJS, `http://localhost:3001`
+- `ai-api`: FastAPI, `http://localhost:8000`
+- `postgres`: PostgreSQL, `localhost:5432`
+- `neo4j`: Neo4j Browser/Bolt, `localhost:7474` ve `localhost:7687`
+
+Kurumsal TLS inspection için `certs/Fortinet_CA_SSL.crt`, üç uygulama image'ının sistem CA deposuna eklenir. npm ve pip TLS doğrulamasını kapatmadan bu CA deposunu kullanır. Sertifika değişirse image'ları cache kullanmadan yeniden build edin:
+
+```bash
+docker compose build --no-cache web api ai-api
+```
+
+Tüm image'ları build edip servisleri başlatın:
+
+```bash
+docker compose up -d --build
+```
+
+Durum ve health kontrolleri:
+
+```bash
+docker compose ps
+curl http://localhost:3000
+curl http://localhost:3001/health
+curl http://localhost:8000/health
+```
+
+Uygulama logları:
+
+```bash
+docker compose logs -f web api ai-api
+```
+
+Container'ları durdurun:
+
+```bash
+docker compose down
+```
+
 ## Web uygulamasını çalıştırma
 
 ```bash
@@ -75,6 +118,29 @@ API varsayılan olarak `http://localhost:3001` adresinde çalışır. Health kon
 
 ```bash
 curl http://localhost:3001/health
+```
+
+Beklenen response:
+
+```json
+{"status":"ok"}
+```
+
+## AI API uygulamasını çalıştırma
+
+```bash
+cd apps/ai-api
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload --port 8000
+```
+
+AI API `http://localhost:8000` adresinde çalışır. Health kontrolü:
+
+```bash
+curl http://localhost:8000/health
 ```
 
 Beklenen response:

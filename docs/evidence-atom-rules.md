@@ -1,125 +1,201 @@
-# Evidence Atom Kuralları
+# Evidence Atom Rules
 
-## Amaç
+## 1. Amaç
 
-Evidence atom, bir candidate fact'in hangi kaynak metne dayandığını gösterecek kadar anlamlı; LLM'e güvenilir bağlam sağlayacak kadar bütünlüklü; review ekranında okunabilecek kadar küçük metin parçasıdır.
+Evidence atom, sistemdeki candidate fact, graph patch ve curated assertion için kaynak kanıt görevi gören küçük, izlenebilir ve anlamı korunmuş bilgi parçasıdır.
 
-Her candidate fact en az bir evidence atom kimliğine referans vermelidir. Evidence atomlar kaynak metni yorumlamaz ve yeni bilgi eklemez.
-
-## Ortak çıktı alanları
-
-Her atom şu alanları taşır:
-
-| Alan | Kural |
-|---|---|
-| `atom_id` | Doküman içinde stabil ve okunabilir kimlik; örnek `quarterly-report:a001` |
-| `atom_index` | Sıfırdan veya birden başlayan, doküman içinde tutarlı sıra numarası |
-| `atom_type` | `paragraph`, `speaker_turn`, `decision_block`, `heading`, `bullet` gibi kaynak yapısını anlatan tip |
-| `source_type` | `pdf`, `transcript` veya `software_note` |
-| `page_number` | PDF için 1 tabanlı sayfa; uygulanmıyorsa `null` |
-| `section_path` | Markdown başlık hiyerarşisi; uygulanmıyorsa boş liste |
-| `text` | Kaynaktan alınmış, normalize edilmiş fakat anlamı değiştirilmemiş içerik |
-| `quality_score` | Basit heuristic ile 0-100 arası kalite skoru |
-| `char_start`, `char_end` | Hesaplanabiliyorsa kaynak metindeki karakter aralığı |
-| `metadata` | Speaker, dosya adı veya parser bilgisi gibi opsiyonel kaynak metadata'sı |
-
-Persistence katmanında ayrıca atomun `documentId`, opsiyonel `hash` ve oluşturulma zamanı tutulur.
-
-## Genel parçalama kuralları
-
-1. Kaynak sırası korunur; `atom_index` deterministik üretilir.
-2. Whitespace normalize edilir, fakat metnin anlamını etkileyen satır yapıları korunur.
-3. Boş veya yalnızca biçimlendirme karakterlerinden oluşan parçalar atılır.
-4. 1500 karakteri aşan atomlar cümle sınırlarından bölünür. Cümle sınırı bulunamazsa güvenli bir kelime sınırı kullanılır.
-5. 80 karakterden kısa, tek başına anlam taşımayan satırlar mümkünse komşu atomla birleştirilir.
-6. Başlık, speaker etiketi, karar/aksiyon/risk işareti gibi yapısal bağlam kaybedilmez.
-7. Birleştirme veya bölme sonrasında atomlar tekrar sıralanır ve kimlikleri deterministik üretilir.
-8. Aynı input ve aynı kurallar aynı `atom_id` dizisini üretmelidir.
-
-80 ve 1500 karakter sınırları mutlak semantik kurallar değil, demo için başlangıç heuristic'leridir. Başlık, kod bloğu veya anlamlı kısa karar gibi kendi başına değer taşıyan parçalar yalnızca kısa olduğu için birleştirilmez.
-
-## PDF kuralları
-
-- Metin sayfa bazlı alınır ve `page_number` korunur.
-- Her sayfa boş satır/paragraf sınırlarından bölünür.
-- Header, footer veya yalnız sayfa numarası olduğu açıkça belirlenebilen tekrarlar filtrelenebilir.
-- 1500 karakter üzerindeki paragraflar cümle bazlı bölünür.
-- 80 karakter altındaki bağlamsız satırlar aynı sayfadaki uygun komşuyla birleştirilir.
-- Sayfalar arası birleştirme ancak cümlenin sayfa sonunda kesildiği açıkça anlaşılırsa yapılır; her durumda kaynak sayfa bilgisi metadata'da korunur.
-- Varsayılan `atom_type` değeri `paragraph` olur.
-
-## Transcript kuralları
-
-- Ana sınır speaker turn'dür; speaker değiştiğinde yeni atom başlar.
-- Speaker adı/etiketi `metadata.speaker` içinde korunur.
-- `Karar`, `Decision`, `Aksiyon`, `Action`, `Risk` ve `Not/Note` olarak işaretlenmiş bloklar ayrı atom yapılır.
-- Karar blokları `decision_block`; aksiyon, risk ve not blokları anlamına uygun tiplerle işaretlenir.
-- Bir speaker turn 1500 karakteri geçerse cümle bazlı bölünür; her alt atom aynı speaker metadata'sını taşır.
-- Çok kısa yanıtlar (`evet`, `tamam` gibi) tek başına kanıt değeri taşımıyorsa komşu turn ile bağlamlandırılabilir; speaker bilgisi kaybedilmez.
-
-## Markdown / software note kuralları
-
-- ATX (`#`) ve mümkünse setext başlıkları section hiyerarşisini günceller.
-- Her atom oluştuğu andaki başlık zincirini `section_path` olarak taşır.
-- Paragraflar, bullet maddeleri ve anlamlı teknik cümleler ayrı atom olabilir.
-- Her bullet bağımsız anlam taşıyorsa ayrı `bullet` atomudur; yalnızca üst maddesiz anlaşılmıyorsa üst madde bağlamıyla birleştirilir.
-- Kod blokları rastgele cümlelere bölünmez. Tek başına fact kaynağı değilse yakınındaki açıklama ile birlikte tutulabilir.
-- Başlık metni section context sağlar; yalnızca anlamlı bir ifade/karar içeriyorsa ayrı atom olarak üretilir.
-
-## Quality score heuristic'i
-
-`quality_score`, olgunun doğruluğunu değil atomun extraction için kullanılabilirliğini ölçer. Başlangıç skoru 50 alınarak şu sinyaller uygulanabilir:
-
-- Tam cümle veya açık bir bullet: pozitif
-- Subject/nesne ve eylem/relation adayı içeren ifade: pozitif
-- Kaynak konumunun (`page_number`, `section_path`, speaker) belirli olması: pozitif
-- Karar, aksiyon, risk veya tarih gibi açık işaretler: pozitif
-- Aşırı kısa, yalnız başlık niteliğinde veya referansı belirsiz ifade: negatif
-- Parser artığı, bozuk karakter oranı veya tekrarlı header/footer: negatif
-- Bağlam olmadan zamirle başlayan parça: negatif
-
-Sonuç 0-100 aralığına sınırlandırılır. `quality_score`, `approval_score` değildir ve human review yerine geçmez.
-
-## İzlenebilirlik ve fact bağlantısı
-
-- Fact extraction yalnızca mevcut atom kimliklerine referans verebilir.
-- `evidence_atom_ids` boş olan LLM çıktısı geçersiz sayılır.
-- `evidence_text`, referans verilen atomların metniyle uyumlu olmalı; yeni bir iddia eklememelidir.
-- Atom metni extraction sonrasında değiştirilirse stabil kimlik/hash stratejisi yeniden değerlendirilmelidir.
-- Candidate fact'ler önce PostgreSQL'e yazılır; evidence atomlar hiçbir koşulda doğrudan Neo4j publish tetiklemez.
-
-## Örnek
-
-Kaynak:
+Evidence atom:
 
 ```text
-# CRM Sync
-
-- Servisin sahibi Platform Takımıdır.
-- CRM Sync, Customer Data projesinin parçasıdır.
+Yorum yapmaz.
+Yeni bilgi üretmez.
+LLM özeti değildir.
+Memory değildir.
+Curated fact değildir.
+Sadece kanıt parçasıdır.
 ```
 
-Olası atomlar:
+Her candidate fact en az bir evidence atom referansı taşımak zorundadır.
+
+## 2. Evidence atom ile semantic memory farkı
+
+```text
+Evidence atom = kaynak kanıt parçası
+Semantic memory = curated KG'den üretilmiş öz bilgi durumu
+```
+
+Örnek evidence atom:
+
+```text
+Mehmet Demir satış başkanı, Ayşe Kaya satış başkan yardımcısıdır.
+```
+
+Örnek semantic memory:
+
+```text
+Güncel organizasyon bilgisine göre satış başkanı Mehmet Demir,
+satış başkan yardımcısı Ayşe Kaya'dır. Önceki kayıtta Ayşe satış başkanı olarak görünüyordu.
+```
+
+## 3. Canonical contract alanları
+
+API contract ve frontend/NestJS tarafında camelCase kullanılır. Python/FastAPI tarafında Pydantic modelleri snake_case kullanabilir ama API çıktısında alias ile camelCase dönmelidir.
+
+Önerilen canonical field isimleri:
 
 ```json
-[
-  {
-    "atom_id": "crm-sync:a001",
-    "atom_index": 1,
-    "atom_type": "bullet",
-    "source_type": "software_note",
-    "page_number": null,
-    "section_path": ["CRM Sync"],
-    "text": "Servisin sahibi Platform Takımıdır."
+{
+  "atomId": "org-update-2026:a001",
+  "documentId": "doc_001",
+  "sourceId": "src_001",
+  "sourceVersion": "v1",
+  "atomIndex": 1,
+  "atomType": "paragraph",
+  "sourceType": "pdf",
+  "text": "Mehmet Demir satış başkanı, Ayşe Kaya satış başkan yardımcısıdır.",
+  "structuredContent": null,
+  "location": {
+    "page": 1,
+    "block": 2
   },
-  {
-    "atom_id": "crm-sync:a002",
-    "atom_index": 2,
-    "atom_type": "bullet",
-    "source_type": "software_note",
-    "page_number": null,
-    "section_path": ["CRM Sync"],
-    "text": "CRM Sync, Customer Data projesinin parçasıdır."
+  "sectionPath": ["Organizasyon", "Satış"],
+  "parentAtomId": null,
+  "qualityScore": 92,
+  "contentHash": "sha256:...",
+  "accessPolicy": "hr_internal",
+  "metadata": {
+    "parser": "pdf_parser_v1"
   }
-]
+}
+```
+
+## 4. Parçalama ilkesi
+
+Atom ne çok büyük ne de çok küçük olmalı.
+
+Kötü atom:
+
+```text
+10 sayfalık rapor bölümü
+```
+
+Sorun: LLM birçok claim arasında karışır.
+
+Kötü atom:
+
+```text
+300 ton
+```
+
+Sorun: Kimin hedefi, hangi yıl, hangi kaynak belli değildir.
+
+İyi atom:
+
+```text
+ABC Boya'nın 2026 satış hedefi 300 tondur.
+```
+
+## 5. Genel parçalama kuralları
+
+```text
+Kaynak sırası korunur.
+Atom ID deterministik üretilir.
+Whitespace normalize edilir ama anlam bozulmaz.
+Boş ve parser artığı parçalar atılır.
+1500 karakter üstü atomlar cümle sınırından bölünür.
+80 karakter altı bağlamsız parçalar komşu context ile birleştirilir.
+Başlık, speaker, tablo başlığı ve section context kaybedilmez.
+```
+
+80 ve 1500 karakter sınırları mutlak semantik kurallar değil, MVP heuristic'leridir.
+
+## 6. PDF kuralları
+
+```text
+Sayfa bazlı metin alınır.
+pageNumber korunur.
+Paragraf ve boş satır sınırları kullanılır.
+Header/footer tekrarları filtrelenebilir.
+Tablo parse edilebiliyorsa table_row veya table_cell atom üretilir.
+```
+
+PDF'de tablo parse edilemezse atom metadata'sına `parserWarning` eklenmelidir.
+
+## 7. TXT / transcript kuralları
+
+```text
+Speaker turn ana sınırdır.
+Speaker metadata içinde korunur.
+Karar/Aksiyon/Risk/Not blokları ayrı atom yapılır.
+Çok kısa cevaplar tek başına kanıt değeri taşımıyorsa komşu context ile bağlanır.
+```
+
+## 8. Markdown / software note kuralları
+
+```text
+# başlıkları sectionPath oluşturur.
+Bullet maddeleri ayrı atom olabilir.
+Kod blokları rastgele cümlelere bölünmez.
+Başlık tek başına claim taşımıyorsa atom değil context olur.
+```
+
+## 9. Quality score
+
+`qualityScore` olgunun doğruluğunu değil, atomun extraction için kullanılabilirliğini ölçer.
+
+Pozitif sinyaller:
+
+```text
+tam cümle
+açık subject/predicate/object sinyali
+kaynak konumu belli
+tarih, karar, aksiyon, risk işareti var
+tablo satırı structured parse edilmiş
+```
+
+Negatif sinyaller:
+
+```text
+aşırı kısa ve bağlamsız
+bozuk OCR
+parser artığı
+sadece header/footer
+zamirle başlayıp context taşımıyor
+```
+
+## 10. Evidence support kuralı
+
+Candidate fact sadece mevcut atom ID'lerine referans verebilir.
+
+Geçersiz:
+
+```json
+{
+  "subjectName": "ABC Boya",
+  "predicate": "hasTarget",
+  "objectName": "300 ton",
+  "evidenceAtomIds": []
+}
+```
+
+Geçerli:
+
+```json
+{
+  "subjectName": "ABC Boya",
+  "predicate": "hasTarget",
+  "objectName": "300 ton / 2026",
+  "evidenceAtomIds": ["sales-targets-2026:a042"],
+  "evidenceText": "ABC Boya'nın 2026 satış hedefi 300 tondur."
+}
+```
+
+## 11. Değişmezlik
+
+Evidence atom metni extraction sonrası değiştirilmemelidir. Kaynak değişirse yeni atom versiyonu üretilir.
+
+```text
+Old atom remains.
+New source version creates new atoms.
+Facts point to the specific atom version they used.
 ```
