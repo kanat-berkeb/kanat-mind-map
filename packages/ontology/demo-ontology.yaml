@@ -1,0 +1,91 @@
+name: singularity-mini-kg-demo
+version: 1
+description: >-
+  Singularity Mini KG Demo içinde LLM fact extraction ve graph publish
+  işlemlerinde kullanılmasına izin verilen entity ve relation tipleri.
+
+entities:
+  Customer:
+    description: Ürün, servis, satış veya ilişki bilgisi takip edilen müşteri kuruluş.
+  Person:
+    description: Müşteri ya da ekip bağlamında adı geçen gerçek kişi.
+  Team:
+    description: Kişilerin üyesi olabildiği ve servis sahipliği üstlenebilen organizasyonel ekip.
+  Region:
+    description: Bir müşterinin bulunduğu coğrafi veya operasyonel bölge.
+  Product:
+    description: Bir müşterinin ilgi gösterdiği ticari ürün.
+  Project:
+    description: Servisleri ve ilgili çalışmaları kapsayan proje.
+  Service:
+    description: Bir ekibin sahip olduğu, projeye bağlı veya başka servislere bağımlı yazılım servisi.
+  Risk:
+    description: Bir müşteri veya projeyi etkileyebilecek tanımlanmış risk.
+  SalesTarget:
+    description: Bir müşteri için belirlenmiş ölçülebilir satış hedefi.
+  Decision:
+    description: Bir dokümanda kayıt altına alınmış iş veya teknik karar.
+  Document:
+    description: Evidence atomların çıkarıldığı PDF, transcript veya yazılım notu kaynağı.
+
+relations:
+  managedBy:
+    description: Bir müşterinin sorumluluğunu üstlenen kişiyi belirtir.
+    from: Customer
+    to: Person
+    evidence_required: true
+  locatedIn:
+    description: Bir müşterinin bulunduğu bölgeyi belirtir.
+    from: Customer
+    to: Region
+    evidence_required: true
+  interestedIn:
+    description: Bir müşterinin ilgilendiği ürünü belirtir.
+    from: Customer
+    to: Product
+    evidence_required: true
+  hasTarget:
+    description: Bir müşteri için tanımlanan satış hedefini belirtir.
+    from: Customer
+    to: SalesTarget
+    evidence_required: true
+  hasRisk:
+    description: Bir müşteriyle ilişkili riski belirtir.
+    from: Customer
+    to: Risk
+    evidence_required: true
+  memberOf:
+    description: Bir kişinin üyesi olduğu ekibi belirtir.
+    from: Person
+    to: Team
+    evidence_required: true
+  ownsService:
+    description: Bir ekibin sahipliğini üstlendiği servisi belirtir.
+    from: Team
+    to: Service
+    evidence_required: true
+  partOf:
+    description: Bir servisin parçası olduğu projeyi belirtir.
+    from: Service
+    to: Project
+    evidence_required: true
+  dependsOn:
+    description: Bir servisin çalışmak için bağımlı olduğu başka servisi belirtir.
+    from: Service
+    to: Service
+    evidence_required: true
+  decidedIn:
+    description: Bir kararın kayıt altına alındığı kaynak dokümanı belirtir.
+    from: Decision
+    to: Document
+    evidence_required: true
+  affects:
+    description: Bir riskin etkilediği projeyi belirtir.
+    from: Risk
+    to: Project
+    evidence_required: true
+  mentions:
+    description: Bir dokümanın adı geçen herhangi bir ontology entity'sine referans verdiğini belirtir.
+    from: Document
+    to: "*"
+    evidence_required: true
