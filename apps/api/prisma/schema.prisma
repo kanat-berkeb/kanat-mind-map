@@ -17,6 +17,7 @@ enum ReviewStatus {
 
 enum PublicationStatus {
   unpublished
+  publish_pending
   published
   publish_failed
 }
@@ -47,6 +48,24 @@ enum ValidationSeverity {
 enum ReviewDecisionType {
   approved
   rejected
+}
+
+enum ConflictStatus {
+  open
+  needs_review
+  resolved
+  dismissed
+}
+
+enum FreshnessStatus {
+  current
+  stale
+  needs_verification
+}
+
+enum MemoryGenerationSource {
+  curated_kg
+  published_assertions
 }
 
 model CandidateFact {
@@ -87,6 +106,7 @@ model ValidationResult {
   recommendedAction String?
   createdAt         DateTime           @default(now())
   candidateFact     CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
+  graphPatches      GraphPatch[]
 
   @@index([candidateFactId, createdAt])
 }
@@ -102,4 +122,101 @@ model ReviewDecision {
   candidateFact   CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
 
   @@index([candidateFactId, createdAt])
+}
+
+model ConflictRecord {
+  id                   String         @id @default(cuid())
+  conflictType         String
+  subjectId            String
+  subjectType          String?
+  predicate            String
+  candidateIds         String[]
+  existingAssertionIds String[]
+  status               ConflictStatus @default(needs_review)
+  resolution           Json?
+  ownerTeam            String?
+  accessPolicy         String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  resolvedAt           DateTime?
+
+  @@index([status, createdAt])
+  @@index([subjectId, predicate])
+}
+
+model GraphPatch {
+  id                  String               @id @default(cuid())
+  patchType           String
+  operations          Json
+  evidenceAtomIds     String[]
+  validationResultId  String?
+  reviewStatus        ReviewStatus         @default(needs_review)
+  publicationStatus   PublicationStatus    @default(unpublished)
+  requiresHumanReview Boolean              @default(true)
+  ontologyVersion     String
+  accessPolicy        String
+  createdAt           DateTime             @default(now())
+  appliedAt           DateTime?
+  validationResult    ValidationResult?    @relation(fields: [validationResultId], references: [id], onDelete: SetNull)
+  publishedAssertions PublishedAssertion[]
+
+  @@index([validationResultId])
+  @@index([reviewStatus, publicationStatus, createdAt])
+}
+
+model PublishedAssertion {
+  id                String            @id @default(cuid())
+  subjectType       String
+  subjectName       String
+  predicate         String
+  objectType        String
+  objectName        String
+  objectProperties  Json?
+  evidenceAtomIds   Json
+  sourceDocumentId  String?
+  graphPatchId      String?
+  reviewStatus      ReviewStatus      @default(approved)
+  publicationStatus PublicationStatus @default(published)
+  validityStatus    ValidityStatus
+  validFrom         DateTime?
+  validUntil        DateTime?
+  knownFrom         DateTime          @default(now())
+  knownUntil        DateTime?
+  supersedes        String[]
+  retractedBy       String?
+  accessPolicy      String
+  ontologyVersion   String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  graphPatch        GraphPatch?       @relation(fields: [graphPatchId], references: [id], onDelete: Restrict)
+
+  @@index([graphPatchId])
+  @@index([subjectType, subjectName, predicate])
+  @@index([validityStatus, validFrom, validUntil])
+}
+
+model SemanticMemoryItem {
+  id               String                 @id @default(cuid())
+  memoryType       String
+  subjectType      String
+  subjectId        String
+  subjectName      String
+  summary          String
+  currentFacts     Json
+  importantHistory Json?
+  openConflictRefs Json?
+  evidenceRefs     Json
+  accessPolicy     String
+  freshnessStatus  FreshnessStatus        @default(needs_verification)
+  lastVerifiedAt   DateTime?
+  ownerTeam        String?
+  memoryVersion    Int                    @default(1)
+  generatedFrom    MemoryGenerationSource @default(curated_kg)
+  ontologyVersion  String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([memoryType, subjectType, subjectId])
+  @@index([freshnessStatus, updatedAt])
+  @@index([subjectType, subjectName])
 }

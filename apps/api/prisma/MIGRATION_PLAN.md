@@ -9,7 +9,7 @@ Henüz migration oluşturulmadıysa PostgreSQL çalışırken `apps/api` içinde
 schema'nın tamamı için:
 
 ```bash
-npx prisma migrate dev --name add_candidate_lifecycle_and_review
+npx prisma migrate dev --name add_living_memory_workflow_models
 npx prisma generate
 ```
 
@@ -25,6 +25,21 @@ npx prisma generate
 `CandidateFact` satırlarına backfill gerekmez. Foreign key'ler zorunludur.
 Validation ve review geçmişini korumak için bağlı kayıt varken parent candidate
 silinmesi `ON DELETE RESTRICT` ile engellenir.
+
+## Task 2.3 tabloları
+
+Task 2.1 ve 2.2 migration'ları daha önce uygulanmış bir veritabanında:
+
+```bash
+npx prisma migrate dev --name add_graph_patch_and_memory_models
+npx prisma generate
+```
+
+`ConflictRecord`, `GraphPatch`, `PublishedAssertion` ve `SemanticMemoryItem` yeni
+tablolardır; mevcut satırlara backfill gerekmez. `PublishedAssertion` bağlıyken
+`GraphPatch` silinemez. `SemanticMemoryItem`, `CandidateFact` ile relation taşımaz;
+`generatedFrom` yalnız curated graph veya published assertion kaynaklarını kabul
+eder.
 
 ## Harici legacy tablo varsa
 
