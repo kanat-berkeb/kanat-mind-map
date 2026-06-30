@@ -4,10 +4,10 @@ export default function Home() {
       <section className="w-full max-w-3xl space-y-8 rounded-3xl border bg-card p-8 shadow-sm sm:p-12">
         <div className="space-y-4">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Human-reviewed knowledge graph
+            Kanat MindMap
           </p>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-6xl">
-            Singularity Mini KG Demo
+            Bu sadece bir demodur
           </h1>
           <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
             Dokümanlardan evidence atomları ve candidate fact&apos;ler üretin,

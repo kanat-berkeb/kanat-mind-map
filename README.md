@@ -63,6 +63,26 @@ npm run dev
 
 Web uygulaması `http://localhost:3000` adresinde açılır.
 
+## API uygulamasını çalıştırma
+
+```bash
+cd apps/api
+npm install
+npm run start:dev
+```
+
+API varsayılan olarak `http://localhost:3001` adresinde çalışır. Health kontrolü:
+
+```bash
+curl http://localhost:3001/health
+```
+
+Beklenen response:
+
+```json
+{"status":"ok"}
+```
+
 ## Dokümantasyon
 
 - [Demo planı](docs/demo-plan.md)
