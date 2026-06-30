@@ -1,4 +1,4 @@
-# Singularity Mini KG Demo
+# kanat-mind-map
 
 PDF, TXT ve Markdown kaynaklarından evidence atomları ve LLM destekli candidate fact'ler üreten; insan tarafından onaylanan fact'leri Neo4j knowledge graph'a yayımlayan bir monorepo demosudur.
 
@@ -27,7 +27,7 @@ Document upload
 
 Local ortamda PostgreSQL ve Neo4j Docker Compose ile çalışacaktır. Web yalnızca NestJS API'ye; NestJS, FastAPI'ye HTTP üzerinden bağlanacaktır. PostgreSQL operasyonel kayıtların, Neo4j ise yalnızca onaylanıp yayımlanmış fact'lerin veri deposudur.
 
-Uygulama framework kurulumları ve servis çalıştırma komutları sonraki task'lerde eklenecektir.
+Framework ve container temelleri hazırdır. Living memory yetenekleri `codex-task-sequence.md` sırasıyla, küçük ve doğrulanabilir task'ler halinde eklenecektir.
 
 ## Altyapıyı çalıştırma
 

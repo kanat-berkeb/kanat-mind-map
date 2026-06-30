@@ -2,7 +2,7 @@
 
 ## 1. Amaç
 
-Bu dosya `kanat-mind-map` projesinde geliştirme yaparken uyulacak pratik kuralları tanımlar. Task listesi değildir. Task listesi tek kaynak olarak `codex-task-plan.md` dosyasında tutulur.
+Bu dosya `kanat-mind-map` projesinde geliştirme yaparken uyulacak pratik kuralları tanımlar. Task listesi değildir. Ayrıntılı task sırası ve promptları için tek kaynak root `codex-task-sequence.md` dosyasıdır. `docs/codex-task-plan.md` yalnızca aynı sıranın kısa faz özetidir.
 
 ## 2. Servis sınırları
 
