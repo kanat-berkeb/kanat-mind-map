@@ -27,7 +27,31 @@ Document upload
 
 Local ortamda PostgreSQL ve Neo4j Docker Compose ile çalışacaktır. Web yalnızca NestJS API'ye; NestJS, FastAPI'ye HTTP üzerinden bağlanacaktır. PostgreSQL operasyonel kayıtların, Neo4j ise yalnızca onaylanıp yayımlanmış fact'lerin veri deposudur.
 
-Framework kurulumları, container tanımları, environment variable'ları ve çalıştırma komutları sonraki task'lerde eklenecektir. Bu aşamada yalnızca monorepo klasör iskeleti ve temel proje dokümantasyonu bulunmaktadır.
+Uygulama framework kurulumları ve servis çalıştırma komutları sonraki task'lerde eklenecektir.
+
+## Altyapıyı çalıştırma
+
+Docker Engine veya Docker Desktop ile Docker Compose eklentisi kurulu olmalıdır.
+
+Local environment dosyasını oluşturun:
+
+```bash
+cp .env.example .env
+```
+
+PostgreSQL ve Neo4j servislerini başlatın:
+
+```bash
+docker compose up -d postgres neo4j
+```
+
+Container durumlarını kontrol edin:
+
+```bash
+docker compose ps
+```
+
+PostgreSQL `localhost:5432`, Neo4j Browser `http://localhost:7474` ve Neo4j Bolt `bolt://localhost:7687` adresinde çalışır.
 
 ## Dokümantasyon
 
