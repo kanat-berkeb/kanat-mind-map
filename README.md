@@ -53,6 +53,16 @@ docker compose ps
 
 PostgreSQL `localhost:5432`, Neo4j Browser `http://localhost:7474` ve Neo4j Bolt `bolt://localhost:7687` adresinde çalışır.
 
+## Web uygulamasını çalıştırma
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Web uygulaması `http://localhost:3000` adresinde açılır.
+
 ## Dokümantasyon
 
 - [Demo planı](docs/demo-plan.md)
