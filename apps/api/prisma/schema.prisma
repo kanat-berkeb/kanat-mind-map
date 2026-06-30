@@ -29,8 +29,28 @@ enum ValidityStatus {
   conflicted
 }
 
+enum ValidationStatus {
+  passed
+  failed
+  warning
+  skipped
+  needs_review
+}
+
+enum ValidationSeverity {
+  info
+  warning
+  error
+  critical
+}
+
+enum ReviewDecisionType {
+  approved
+  rejected
+}
+
 model CandidateFact {
-  id                String            @id @default(cuid())
+  id                String             @id @default(cuid())
   subjectName       String
   subjectType       String
   predicate         String
@@ -42,8 +62,8 @@ model CandidateFact {
   evidenceText      String
   llmConfidence     Float?
   approvalScore     Int?
-  reviewStatus      ReviewStatus      @default(candidate)
-  publicationStatus PublicationStatus @default(unpublished)
+  reviewStatus      ReviewStatus       @default(candidate)
+  publicationStatus PublicationStatus  @default(unpublished)
   validityStatus    ValidityStatus?
   ontologyVersion   String?
   validationSummary Json?
@@ -52,6 +72,34 @@ model CandidateFact {
   validUntil        DateTime?
   knownFrom         DateTime?
   knownUntil        DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  validationResults ValidationResult[]
+  reviewDecisions   ReviewDecision[]
+}
+
+model ValidationResult {
+  id                String             @id @default(cuid())
+  candidateFactId   String
+  overallStatus     ValidationStatus
+  severity          ValidationSeverity
+  checks            Json
+  recommendedAction String?
+  createdAt         DateTime           @default(now())
+  candidateFact     CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
+
+  @@index([candidateFactId, createdAt])
+}
+
+model ReviewDecision {
+  id              String             @id @default(cuid())
+  candidateFactId String
+  reviewerId      String?
+  decision        ReviewDecisionType
+  reason          String?
+  changedFields   Json?
+  createdAt       DateTime           @default(now())
+  candidateFact   CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
+
+  @@index([candidateFactId, createdAt])
 }

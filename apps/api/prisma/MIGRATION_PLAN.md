@@ -5,12 +5,26 @@ migration `CandidateFact` tablosunu ve üç lifecycle enumunu sıfırdan oluştu
 
 ## Yeni kurulum
 
-PostgreSQL çalışırken `apps/api` içinde:
+Henüz migration oluşturulmadıysa PostgreSQL çalışırken `apps/api` içinde güncel
+schema'nın tamamı için:
 
 ```bash
-npx prisma migrate dev --name add_candidate_fact_lifecycle
+npx prisma migrate dev --name add_candidate_lifecycle_and_review
 npx prisma generate
 ```
+
+Task 2.1 migration'ı daha önce uygulanmış bir veritabanında yalnız Task 2.2
+tablolarını eklemek için:
+
+```bash
+npx prisma migrate dev --name add_validation_and_review_models
+npx prisma generate
+```
+
+`ValidationResult` ve `ReviewDecision` yeni tablolar olduğu için mevcut
+`CandidateFact` satırlarına backfill gerekmez. Foreign key'ler zorunludur.
+Validation ve review geçmişini korumak için bağlı kayıt varken parent candidate
+silinmesi `ON DELETE RESTRICT` ile engellenir.
 
 ## Harici legacy tablo varsa
 
