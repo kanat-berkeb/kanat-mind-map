@@ -76,6 +76,7 @@ services:
       NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-password123}
       AI_API_BASE_URL: http://ai-api:8000
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
       UPLOAD_DIR: /app/uploads
     ports:
       - "${API_PORT:-3001}:3001"
