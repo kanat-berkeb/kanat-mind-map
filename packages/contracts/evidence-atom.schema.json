@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kanat-mind-map.local/schemas/v1/evidence-atom.schema.json",
+  "title": "EvidenceAtom",
+  "description": "Immutable, traceable source evidence. It is not curated knowledge or semantic memory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "atomId",
+    "documentId",
+    "sourceId",
+    "sourceVersion",
+    "atomIndex",
+    "atomType",
+    "sourceType",
+    "text",
+    "structuredContent",
+    "location",
+    "sectionPath",
+    "parentAtomId",
+    "qualityScore",
+    "contentHash",
+    "accessPolicy",
+    "metadata"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "atomId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*:a[0-9]+$"
+    },
+    "documentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "atomIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "atomType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["pdf", "txt", "transcript", "markdown", "software_note"]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1500
+    },
+    "structuredContent": {
+      "type": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "location": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "page": { "type": ["integer", "null"], "minimum": 1 },
+        "block": { "type": ["integer", "null"], "minimum": 0 },
+        "lineStart": { "type": ["integer", "null"], "minimum": 0 },
+        "lineEnd": { "type": ["integer", "null"], "minimum": 0 },
+        "charStart": { "type": ["integer", "null"], "minimum": 0 },
+        "charEnd": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "sectionPath": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+    "parentAtomId": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "qualityScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^sha256:[A-Fa-f0-9]{64}$"
+    },
+    "accessPolicy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "default": {}
+    }
+  }
+}

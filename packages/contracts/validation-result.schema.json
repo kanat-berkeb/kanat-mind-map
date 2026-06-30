@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kanat-mind-map.local/schemas/v1/validation-result.schema.json",
+  "title": "ValidationResult",
+  "description": "Persistable validation output for candidate facts or graph patches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "targetType",
+    "targetId",
+    "overallStatus",
+    "severity",
+    "checks",
+    "recommendedAction",
+    "requiresHumanReview"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "targetType": { "type": "string", "enum": ["CandidateFact", "GraphPatch"] },
+    "targetId": { "type": "string", "minLength": 1 },
+    "overallStatus": {
+      "type": "string",
+      "enum": ["passed", "failed", "warning", "skipped", "needs_review"]
+    },
+    "severity": { "type": "string", "enum": ["info", "warning", "error", "critical"] },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "recommendedAction": { "type": ["string", "null"], "minLength": 1 },
+    "requiresHumanReview": { "type": "boolean" },
+    "ontologyVersion": { "type": "string", "minLength": 1 },
+    "validationRuleVersion": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "severity", "message"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "warning", "skipped", "needs_review"]
+        },
+        "severity": { "type": "string", "enum": ["info", "warning", "error", "critical"] },
+        "message": { "type": "string", "minLength": 1 },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kanat-mind-map.local/schemas/v1/process-document-response.schema.json",
+  "title": "ProcessDocumentResponse",
+  "description": "Stateless FastAPI document-processing response consumed and persisted by NestJS.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidenceAtoms", "candidateFacts", "metadata", "warnings"],
+  "properties": {
+    "evidenceAtoms": {
+      "type": "array",
+      "items": { "$ref": "evidence-atom.schema.json" }
+    },
+    "candidateFacts": {
+      "type": "array",
+      "items": { "$ref": "candidate-fact.schema.json" }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileName",
+        "sourceType",
+        "parserVersion",
+        "ontologyVersion",
+        "processedAt",
+        "atomCount",
+        "candidateFactCount"
+      ],
+      "properties": {
+        "fileName": { "type": "string", "minLength": 1 },
+        "sourceType": {
+          "type": "string",
+          "enum": ["pdf", "txt", "transcript", "markdown", "software_note"]
+        },
+        "parserVersion": { "type": "string", "minLength": 1 },
+        "ontologyVersion": { "type": "string", "minLength": 1 },
+        "extractionPromptVersion": { "type": ["string", "null"], "minLength": 1 },
+        "processedAt": { "type": "string", "format": "date-time" },
+        "atomCount": { "type": "integer", "minimum": 0 },
+        "candidateFactCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" },
+      "default": []
+    }
+  },
+  "$defs": {
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "severity"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+        "evidenceAtomId": { "type": ["string", "null"], "minLength": 1 },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}
