@@ -2,12 +2,14 @@ import {
   BadGatewayException,
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { Prisma } from '../generated/prisma/client';
+import { PRISMA_SERVICE } from '../prisma/prisma.constants';
 import type { PrismaService } from '../prisma/prisma.service';
 
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.txt', '.md']);
@@ -80,7 +82,7 @@ interface ProcessDocumentResponse {
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PRISMA_SERVICE) private readonly prisma: PrismaService) {}
 
   async getDocument(documentId: string): Promise<unknown> {
     const document = await this.prisma.document.findUnique({

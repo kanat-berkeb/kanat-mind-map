@@ -21,9 +21,15 @@ class FactExtractionError(RuntimeError):
 @lru_cache(maxsize=1)
 def load_ontology() -> dict[str, Any]:
     configured = Path(settings.ontology_path) if settings.ontology_path else None
-    local = Path(__file__).resolve().parents[4] / "packages/ontology/demo-ontology.yaml"
     container = Path("/app/packages/ontology/demo-ontology.yaml")
-    path = configured or (local if local.exists() else container)
+    local_candidates = [
+        parent / "packages/ontology/demo-ontology.yaml"
+        for parent in Path(__file__).resolve().parents
+    ]
+    path = configured or next(
+        (candidate for candidate in [container, *local_candidates] if candidate.exists()),
+        container,
+    )
     try:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
