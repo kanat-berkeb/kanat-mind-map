@@ -1,6 +1,10 @@
+import re
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
+
+
+PDF_LIST_MARKER = re.compile(r"^([•●▪◦*-])\s+")
 
 
 @dataclass(frozen=True)
@@ -43,15 +47,35 @@ def _parse_pdf(content: bytes) -> list[ParsedBlock]:
     blocks: list[ParsedBlock] = []
     for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
-        for block_index, paragraph in enumerate(_paragraphs(text)):
-            blocks.append(
-                ParsedBlock(
-                    text=paragraph,
-                    page=page_number,
-                    block=block_index,
-                    metadata={"parser": "pypdf"},
-                )
+        blocks.extend(_pdf_blocks(text, page_number))
+    return blocks
+
+
+def _pdf_blocks(text: str, page_number: int) -> list[ParsedBlock]:
+    blocks: list[ParsedBlock] = []
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    for line in normalized.splitlines():
+        value = " ".join(line.split())
+        if not value:
+            continue
+
+        metadata = {"parser": "pypdf"}
+        atom_type = "paragraph"
+        marker = PDF_LIST_MARKER.match(value)
+        if marker:
+            metadata["listMarker"] = marker.group(1)
+            atom_type = "list_item"
+            value = value[marker.end() :]
+
+        blocks.append(
+            ParsedBlock(
+                text=value,
+                atom_type=atom_type,
+                page=page_number,
+                block=len(blocks),
+                metadata=metadata,
             )
+        )
     return blocks
 
 

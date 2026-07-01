@@ -4,8 +4,8 @@ from pathlib import Path
 
 from app.schemas.document_processing import EvidenceAtom, EvidenceLocation, SourceType
 from app.services.document_parser_service import ParsedBlock
+from app.services.semantic_atom_service import SemanticPiece
 
-MAX_ATOM_LENGTH = 1500
 MIN_ATOM_LENGTH = 80
 
 
@@ -13,15 +13,15 @@ def build_evidence_atoms(
     file_name: str,
     content: bytes,
     source_type: SourceType,
-    blocks: list[ParsedBlock],
+    pieces: list[SemanticPiece],
 ) -> list[EvidenceAtom]:
     source_hash = hashlib.sha256(content).hexdigest()
     source_key = f"{_slug(Path(file_name).stem)}-{source_hash[:12]}"
     source_version = f"sha256:{source_hash}"
-    pieces = _split_and_merge(blocks)
-
     atoms: list[EvidenceAtom] = []
-    for index, (block, text) in enumerate(pieces):
+    for index, piece in enumerate(pieces):
+        block = piece.block
+        text = piece.text
         atom_id = f"{source_key}:a{index + 1:03d}"
         atoms.append(
             EvidenceAtom(
@@ -37,80 +37,26 @@ def build_evidence_atoms(
                 location=EvidenceLocation(
                     page=block.page,
                     block=block.block,
-                    char_start=block.char_start,
-                    char_end=block.char_end,
+                    char_start=(
+                        block.char_start + piece.relative_start
+                        if block.char_start is not None
+                        else None
+                    ),
+                    char_end=(
+                        block.char_start + piece.relative_end
+                        if block.char_start is not None
+                        else None
+                    ),
                 ),
                 section_path=block.section_path,
                 parent_atom_id=None,
                 quality_score=_quality_score(text, block),
                 content_hash=f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
                 access_policy="internal",
-                metadata=block.metadata,
+                metadata={**block.metadata, "segmentation": "llm_semantic_v1"},
             )
         )
     return atoms
-
-
-def _split_and_merge(blocks: list[ParsedBlock]) -> list[tuple[ParsedBlock, str]]:
-    pieces: list[tuple[ParsedBlock, str]] = []
-    for block in blocks:
-        for text in _split_text(" ".join(block.text.split())):
-            if text:
-                pieces.append((block, text))
-
-    merged: list[tuple[ParsedBlock, str]] = []
-    for block, text in pieces:
-        if (
-            len(text) < MIN_ATOM_LENGTH
-            and merged
-            and merged[-1][0].page == block.page
-            and merged[-1][0].section_path == block.section_path
-            and len(merged[-1][1]) + 1 + len(text) <= MAX_ATOM_LENGTH
-        ):
-            previous_block, previous_text = merged[-1]
-            merged[-1] = (previous_block, f"{previous_text} {text}")
-        else:
-            merged.append((block, text))
-    return merged
-
-
-def _split_text(text: str) -> list[str]:
-    if len(text) <= MAX_ATOM_LENGTH:
-        return [text]
-
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    chunks: list[str] = []
-    current = ""
-    for sentence in sentences:
-        if len(sentence) > MAX_ATOM_LENGTH:
-            if current:
-                chunks.append(current)
-                current = ""
-            chunks.extend(_split_words(sentence))
-        elif not current:
-            current = sentence
-        elif len(current) + 1 + len(sentence) <= MAX_ATOM_LENGTH:
-            current = f"{current} {sentence}"
-        else:
-            chunks.append(current)
-            current = sentence
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-def _split_words(text: str) -> list[str]:
-    chunks: list[str] = []
-    current = ""
-    for word in text.split():
-        if current and len(current) + 1 + len(word) > MAX_ATOM_LENGTH:
-            chunks.append(current)
-            current = word
-        else:
-            current = word if not current else f"{current} {word}"
-    if current:
-        chunks.append(current)
-    return chunks
 
 
 def _quality_score(text: str, block: ParsedBlock) -> int:

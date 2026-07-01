@@ -12,6 +12,11 @@ from app.schemas.document_processing import (
 )
 from app.services.document_parser_service import parse_document
 from app.services.evidence_atom_service import build_evidence_atoms
+from app.services.semantic_atom_service import (
+    PROMPT_VERSION,
+    SemanticAtomError,
+    segment_blocks,
+)
 
 router = APIRouter(tags=["document-processing"])
 
@@ -31,9 +36,13 @@ async def process_document(
 
     try:
         blocks = parse_document(file_name, content)
-        atoms = build_evidence_atoms(file_name, content, source_type, blocks)
+        pieces = await segment_blocks(blocks)
+        atoms = build_evidence_atoms(file_name, content, source_type, pieces)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except SemanticAtomError as exc:
+        print("SemanticAtomError:", repr(exc), flush=True)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     warnings: list[ProcessingWarning] = []
     if not atoms:
@@ -51,9 +60,9 @@ async def process_document(
         metadata=ProcessMetadata(
             file_name=file_name,
             source_type=source_type,
-            parser_version="document-parser-v1",
+            parser_version="document-parser-v1+llm-semantic-v1",
             ontology_version="demo-v1",
-            extraction_prompt_version=None,
+            extraction_prompt_version=PROMPT_VERSION,
             processed_at=datetime.now(timezone.utc),
             atom_count=len(atoms),
             candidate_fact_count=0,
