@@ -153,15 +153,18 @@ model CandidateFact {
 }
 
 model ValidationResult {
-  id                String             @id @default(cuid())
-  candidateFactId   String
-  overallStatus     ValidationStatus
-  severity          ValidationSeverity
-  checks            Json
-  recommendedAction String?
-  createdAt         DateTime           @default(now())
-  candidateFact     CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
-  graphPatches      GraphPatch[]
+  id                    String             @id @default(cuid())
+  candidateFactId       String
+  overallStatus         ValidationStatus
+  severity              ValidationSeverity
+  checks                Json
+  recommendedAction     String?
+  requiresHumanReview   Boolean            @default(false)
+  ontologyVersion       String?
+  validationRuleVersion String             @default("validation_rules_v1")
+  createdAt             DateTime           @default(now())
+  candidateFact         CandidateFact      @relation(fields: [candidateFactId], references: [id], onDelete: Restrict)
+  graphPatches          GraphPatch[]
 
   @@index([candidateFactId, createdAt])
 }
