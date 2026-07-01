@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 PDF_LIST_MARKER = re.compile(r"^([•●▪◦*-])\s+")
+SPEAKER_TURN = re.compile(r"^(?P<speaker>[^:\n]{1,80}):\s+(?P<content>\S.*)$")
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,10 @@ def _pdf_blocks(text: str, page_number: int) -> list[ParsedBlock]:
 
 
 def _parse_text(text: str) -> list[ParsedBlock]:
+    transcript_blocks = _transcript_blocks(text)
+    if transcript_blocks is not None:
+        return transcript_blocks
+
     blocks: list[ParsedBlock] = []
     cursor = 0
     for index, paragraph in enumerate(_paragraphs(text)):
@@ -95,6 +100,34 @@ def _parse_text(text: str) -> list[ParsedBlock]:
             )
         )
         cursor = end
+    return blocks
+
+
+def _transcript_blocks(text: str) -> list[ParsedBlock] | None:
+    """Parse speaker turns only when every non-empty line has transcript form."""
+    lines = list(text.splitlines(keepends=True))
+    non_empty = [line.strip() for line in lines if line.strip()]
+    if not non_empty or not all(SPEAKER_TURN.match(line) for line in non_empty):
+        return None
+
+    blocks: list[ParsedBlock] = []
+    offset = 0
+    for line in lines:
+        value = line.strip()
+        match = SPEAKER_TURN.match(value)
+        if match:
+            start = offset + len(line) - len(line.lstrip())
+            blocks.append(
+                ParsedBlock(
+                    text=value,
+                    atom_type="speaker_turn",
+                    block=len(blocks),
+                    char_start=start,
+                    char_end=start + len(value),
+                    metadata={"speaker": match.group("speaker")},
+                )
+            )
+        offset += len(line)
     return blocks
 
 

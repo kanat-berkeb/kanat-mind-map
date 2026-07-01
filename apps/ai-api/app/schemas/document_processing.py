@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def to_camel(value: str) -> str:
@@ -14,6 +14,7 @@ class ApiModel(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
         serialize_by_alias=True,
+        extra="forbid",
     )
 
 
@@ -63,6 +64,13 @@ class CandidateFact(ApiModel):
     valid_until: date | None = None
     ontology_version: str = Field(min_length=1)
     extraction_warnings: list[str] = Field(default_factory=list)
+
+    @field_validator("evidence_atom_ids")
+    @classmethod
+    def evidence_atom_ids_must_be_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("evidenceAtomIds tekrar eden değer içeremez.")
+        return value
 
 
 class ProcessMetadata(ApiModel):

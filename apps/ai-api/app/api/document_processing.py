@@ -15,6 +15,7 @@ from app.services.evidence_atom_service import build_evidence_atoms
 from app.services.semantic_atom_service import (
     PROMPT_VERSION,
     SemanticAtomError,
+    deterministic_segments,
     segment_blocks,
 )
 
@@ -36,15 +37,33 @@ async def process_document(
 
     try:
         blocks = parse_document(file_name, content)
-        pieces = await segment_blocks(blocks)
-        atoms = build_evidence_atoms(file_name, content, source_type, pieces)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except SemanticAtomError as exc:
-        print("SemanticAtomError:", repr(exc), flush=True)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     warnings: list[ProcessingWarning] = []
+    segmentation_version = "llm-semantic-v1"
+    try:
+        pieces = await segment_blocks(blocks)
+    except SemanticAtomError as exc:
+        pieces = deterministic_segments(blocks)
+        segmentation_version = "deterministic-fallback-v1"
+        warnings.append(
+            ProcessingWarning(
+                code="SEMANTIC_SEGMENTATION_FALLBACK",
+                message="LLM segmentasyonu başarısız; deterministik parçalama kullanıldı.",
+                severity="warning",
+                metadata={"errorType": type(exc).__name__},
+            )
+        )
+
+    atoms = build_evidence_atoms(
+        file_name,
+        content,
+        source_type,
+        pieces,
+        segmentation=segmentation_version,
+    )
+
     if not atoms:
         warnings.append(
             ProcessingWarning(
@@ -60,7 +79,7 @@ async def process_document(
         metadata=ProcessMetadata(
             file_name=file_name,
             source_type=source_type,
-            parser_version="document-parser-v1+llm-semantic-v1",
+            parser_version=f"document-parser-v1+{segmentation_version}",
             ontology_version="demo-v1",
             extraction_prompt_version=PROMPT_VERSION,
             processed_at=datetime.now(timezone.utc),

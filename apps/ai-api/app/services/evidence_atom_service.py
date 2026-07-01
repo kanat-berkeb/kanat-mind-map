@@ -14,6 +14,7 @@ def build_evidence_atoms(
     content: bytes,
     source_type: SourceType,
     pieces: list[SemanticPiece],
+    segmentation: str = "llm_semantic_v1",
 ) -> list[EvidenceAtom]:
     source_hash = hashlib.sha256(content).hexdigest()
     source_key = f"{_slug(Path(file_name).stem)}-{source_hash[:12]}"
@@ -53,7 +54,7 @@ def build_evidence_atoms(
                 quality_score=_quality_score(text, block),
                 content_hash=f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
                 access_policy="internal",
-                metadata={**block.metadata, "segmentation": "llm_semantic_v1"},
+                metadata={**block.metadata, "segmentation": segmentation},
             )
         )
     return atoms

@@ -10,6 +10,7 @@ from app.services.document_parser_service import ParsedBlock
 PROMPT_VERSION = "semantic-atom-v1"
 MAX_BATCH_CHARS = 6000
 MAX_ATOM_LENGTH = 1500
+MIN_ATOM_LENGTH = 80
 PreparedBlock = tuple[int, ParsedBlock, str, int]
 
 SYSTEM_PROMPT = """You split source text into evidence atoms.
@@ -53,7 +54,7 @@ async def segment_blocks(blocks: list[ParsedBlock]) -> list[SemanticPiece]:
     async with httpx.AsyncClient(timeout=300) as client:
         for batch in _batches(prepared):
             raw_atoms = await _request_atoms(client, batch)
-            pieces.extend(_validate_atoms(batch, raw_atoms))
+            pieces.extend(_merge_short_pieces(_validate_atoms(batch, raw_atoms)))
     return pieces
 
 
@@ -183,6 +184,69 @@ def _validate_atoms(
             )
             cursor = end + 1
     return result
+
+
+def _merge_short_pieces(pieces: list[SemanticPiece]) -> list[SemanticPiece]:
+    """Merge weak short neighbors without crossing source-block boundaries."""
+    merged: list[SemanticPiece] = []
+    for piece in pieces:
+        if not merged:
+            merged.append(piece)
+            continue
+        previous = merged[-1]
+        combined_text = f"{previous.text} {piece.text}"
+        same_block = previous.block is piece.block
+        needs_context = (
+            len(previous.text) < MIN_ATOM_LENGTH
+            or len(piece.text) < MIN_ATOM_LENGTH
+        )
+        if same_block and needs_context and len(combined_text) <= MAX_ATOM_LENGTH:
+            merged[-1] = SemanticPiece(
+                block=previous.block,
+                text=combined_text,
+                relative_start=previous.relative_start,
+                relative_end=piece.relative_end,
+            )
+        else:
+            merged.append(piece)
+    return merged
+
+
+def deterministic_segments(blocks: list[ParsedBlock]) -> list[SemanticPiece]:
+    """Lossless fallback used when semantic segmentation is unavailable."""
+    pieces: list[SemanticPiece] = []
+    for block in blocks:
+        source = " ".join(block.text.split())
+        cursor = 0
+        while cursor < len(source):
+            end = _split_end(source, cursor)
+            pieces.append(
+                SemanticPiece(
+                    block=block,
+                    text=source[cursor:end],
+                    relative_start=cursor,
+                    relative_end=end,
+                )
+            )
+            cursor = end + 1 if end < len(source) and source[end] == " " else end
+    return _merge_short_pieces(pieces)
+
+
+def _split_end(source: str, start: int) -> int:
+    limit = min(start + MAX_ATOM_LENGTH, len(source))
+    if limit == len(source):
+        return limit
+
+    lower_bound = start + MAX_ATOM_LENGTH // 2
+    sentence_end = max(
+        source.rfind(". ", lower_bound, limit),
+        source.rfind("! ", lower_bound, limit),
+        source.rfind("? ", lower_bound, limit),
+    )
+    if sentence_end >= 0:
+        return sentence_end + 1
+    word_end = source.rfind(" ", start + 1, limit)
+    return word_end if word_end > start else limit
 
 
 def _prepare_blocks(blocks: list[ParsedBlock]) -> list[PreparedBlock]:
