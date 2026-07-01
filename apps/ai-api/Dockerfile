@@ -23,6 +23,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app apps/ai-api/app ./app
+COPY --chown=app:app packages/ontology/demo-ontology.yaml ./packages/ontology/demo-ontology.yaml
 
 USER app
 

@@ -12,8 +12,13 @@ from app.schemas.document_processing import (
 )
 from app.services.document_parser_service import parse_document
 from app.services.evidence_atom_service import build_evidence_atoms
+from app.services.fact_extraction_service import (
+    PROMPT_VERSION as EXTRACTION_PROMPT_VERSION,
+    FactExtractionError,
+    extract_candidate_facts,
+    load_ontology,
+)
 from app.services.semantic_atom_service import (
-    PROMPT_VERSION,
     SemanticAtomError,
     deterministic_segments,
     segment_blocks,
@@ -73,18 +78,37 @@ async def process_document(
             )
         )
 
+    try:
+        candidate_facts, extraction_warnings = await extract_candidate_facts(atoms)
+        warnings.extend(extraction_warnings)
+    except FactExtractionError as exc:
+        candidate_facts = []
+        warnings.append(
+            ProcessingWarning(
+                code="FACT_EXTRACTION_FAILED",
+                message="Candidate fact extraction başarısız; evidence atomlar korundu.",
+                severity="error",
+                metadata={"errorType": type(exc).__name__},
+            )
+        )
+
+    try:
+        ontology_version = load_ontology()["ontologyVersion"]
+    except (FactExtractionError, KeyError):
+        ontology_version = "unknown"
+
     return ProcessDocumentResponse(
         evidence_atoms=atoms,
-        candidate_facts=[],
+        candidate_facts=candidate_facts,
         metadata=ProcessMetadata(
             file_name=file_name,
             source_type=source_type,
             parser_version=f"document-parser-v1+{segmentation_version}",
-            ontology_version="demo-v1",
-            extraction_prompt_version=PROMPT_VERSION,
+            ontology_version=ontology_version,
+            extraction_prompt_version=EXTRACTION_PROMPT_VERSION,
             processed_at=datetime.now(timezone.utc),
             atom_count=len(atoms),
-            candidate_fact_count=0,
+            candidate_fact_count=len(candidate_facts),
         ),
         warnings=warnings,
     )
