@@ -64,3 +64,17 @@ conflicted -> needs_review / unpublished / conflicted
 ```
 
 Mapping, üretim verisi görülmeden otomatik uygulanmamalıdır.
+
+## Task 4.1 document extraction tabloları
+
+`Document` ve `EvidenceAtom` tabloları ile `CandidateFact.sourceDocumentId`
+foreign key'i eklenir:
+
+```bash
+npx prisma migrate dev --name add_document_extraction_persistence
+npx prisma generate
+```
+
+Legacy `CandidateFact.sourceDocumentId` değerleri gerçek bir `Document.id` ile
+eşleşmiyorsa foreign key eklenmeden önce temizlenmeli veya document kayıtlarına
+map edilmelidir. Mapping üretim verisi görülmeden otomatik uygulanmamalıdır.

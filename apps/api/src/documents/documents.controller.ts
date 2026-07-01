@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -27,5 +29,25 @@ export class DocumentsController {
       throw new BadRequestException('file alanı zorunlu.');
     }
     return this.documentsService.process(file, sourceType);
+  }
+
+  @Post(':id/extract')
+  extractDocument(@Param('id') id: string): Promise<unknown> {
+    return this.documentsService.extract(id);
+  }
+
+  @Get(':id')
+  getDocument(@Param('id') id: string): Promise<unknown> {
+    return this.documentsService.getDocument(id);
+  }
+
+  @Get(':id/facts')
+  getDocumentFacts(@Param('id') id: string): Promise<unknown> {
+    return this.documentsService.getFacts(id);
+  }
+
+  @Get(':id/evidence-atoms')
+  getDocumentEvidenceAtoms(@Param('id') id: string): Promise<unknown> {
+    return this.documentsService.getEvidenceAtoms(id);
   }
 }

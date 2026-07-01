@@ -22,7 +22,7 @@ FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY apps/api/ ./
 
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 FROM base AS runner
 

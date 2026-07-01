@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -68,6 +68,57 @@ enum MemoryGenerationSource {
   published_assertions
 }
 
+enum DocumentStatus {
+  uploaded
+  extracting
+  extracted
+  failed
+}
+
+model Document {
+  id                 String          @id @default(cuid())
+  fileName           String
+  fileType           String
+  sourceType         String
+  storagePath        String
+  status             DocumentStatus  @default(uploaded)
+  accessPolicy       String
+  extractionMetadata Json?
+  extractionWarnings Json?
+  extractionError    String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  evidenceAtoms      EvidenceAtom[]
+  candidateFacts     CandidateFact[]
+
+  @@index([status, createdAt])
+}
+
+model EvidenceAtom {
+  id                String   @id @default(cuid())
+  atomId            String
+  documentId        String
+  sourceId          String
+  sourceVersion     String
+  atomIndex         Int
+  atomType          String
+  sourceType        String
+  text              String
+  structuredContent Json?
+  location          Json?
+  sectionPath       String[]
+  parentAtomId      String?
+  qualityScore      Int
+  contentHash       String
+  accessPolicy      String
+  metadata          Json
+  createdAt         DateTime @default(now())
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Restrict)
+
+  @@unique([documentId, atomId])
+  @@index([documentId, atomIndex])
+}
+
 model CandidateFact {
   id                String             @id @default(cuid())
   subjectName       String
@@ -95,6 +146,9 @@ model CandidateFact {
   updatedAt         DateTime           @updatedAt
   validationResults ValidationResult[]
   reviewDecisions   ReviewDecision[]
+  sourceDocument    Document?          @relation(fields: [sourceDocumentId], references: [id], onDelete: Restrict)
+
+  @@index([sourceDocumentId, createdAt])
 }
 
 model ValidationResult {
